@@ -1,9 +1,12 @@
 import boto3
 import json
 import re
+import os
 
 print('Loading function')
-s3 = boto3.client('s3')
+region = os.environ['AWS_DEFAULT_REGION']
+s3 = boto3.client('s3',region_name=region)
+
 bedrock = boto3.client(
     service_name='bedrock-runtime',
     region_name='us-east-1'
@@ -37,7 +40,10 @@ def lambda_handler(event, context):
     new_srt_content = generate_srt(id_list, time_list,translated_entries)
 
     # upload new file
-    new_key = key.replace('.srt', '_translated.srt')
+    new_key_name = key.replace('.srt', '_translated.srt')
+    folder_path = 'output/'
+    new_key = folder_path + new_key_name
+
     s3.put_object(Bucket=bucket, Key=new_key, Body=new_srt_content.encode('utf-8'))
 
     return {
