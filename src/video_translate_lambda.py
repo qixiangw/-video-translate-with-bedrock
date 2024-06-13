@@ -40,7 +40,7 @@ def lambda_handler(event, context):
     new_srt_content = generate_srt(id_list, time_list,translated_entries)
 
     # upload new file
-    new_key_name = key.replace('.srt', '_translated.srt')
+    new_key_name = input_file_name.replace('.srt', '_translated.srt')
     folder_path = 'output/'
     new_key = folder_path + new_key_name
 
