@@ -1,0 +1,101 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'AWS CloudFormation Template for Video Translation with Bedrock'
+
+Parameters:
+  S3BucketName:
+    Type: String
+    Description: 'Name of the S3 bucket to use for uploading SRT files. If not provided, a new bucket will be created.'
+  #BedrockId:
+    #Type: String
+    #Default: ''
+    #Description: 'Bedrock ID for the translation service'
+  #TargetLanguage:
+    #Type: String
+    #Default: ''
+    #Description: 'Target language for translation'
+
+Resources:
+  LambdaVideoTranslateWithBedrock:
+    Type: AWS::Lambda::Function
+    Properties:
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Code:
+        ZipFile: |
+          import json
+          
+          def lambda_handler(event, context):
+              # TODO: Implement translation logic
+              return {
+                  'statusCode': 200,
+                  'body': json.dumps('Hello from Lambda!')
+              }
+      Runtime: python3.8
+      Timeout: 30
+  
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            - s3:PutObject
+            Resource: !Sub 'arn:aws:s3:::${S3BucketName}/*'
+          - Effect: Allow
+            Action:
+            - bedrock:InvokeModel
+            - bedrock:InvokeModelWithResponseStream
+            Resource: arn:aws:bedrock:*::foundation-model/*
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Ref S3BucketName
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Filter:
+              S3Key:
+                Rules:
+                  - Name: suffix
+                    Value: .srt
+            Function: !GetAtt LambdaVideoTranslateWithBedrock.Arn
+
+  S3BucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaVideoTranslateWithBedrock
+      Principal: s3.amazonaws.com
+      SourceAccount: !Ref AWS::AccountId
+      SourceArn: !Sub 'arn:aws:s3:::${S3BucketName}'
+
+
+
+Outputs:
+  LambdaVideoTranslateWithBedrockArn:
+    Description: Lambda function ARN 
+    Value: !GetAtt LambdaVideoTranslateWithBedrock.Arn
+  S3BucketName: 
+    Description: S3 bucket name
+    Value: !Ref S3Bucket
