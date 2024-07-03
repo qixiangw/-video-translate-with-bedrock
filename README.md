@@ -23,6 +23,6 @@ Amazon Simple Storage Service (Amazon S3) 是一种对象存储服务，提供�
 4. 用户可以利用原来的视频文件和目标语言的 SRT 字幕文件
 
 ## 部署说明
-
-/deploy 文件夹中提供了基于Cloudformation一键部署的方式，包括新建一个用于存储字幕文件的S3桶，以及一个用于部署翻译应用的lambda函数；
+<br>
+/deploy 文件夹中提供了基于Cloudformation一键部署的方式，包括新建一个用于存储字幕文件的S3桶，以及一个用于部署翻译应用的lambda函数；<br>
 /src 文件夹中有字幕翻译相关的python 和 Lambda原始代码，方便自定义部署的时候根据自己的需求更改代码；
