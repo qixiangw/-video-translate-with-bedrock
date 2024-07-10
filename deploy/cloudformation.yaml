@@ -203,6 +203,8 @@ Resources:
                 Rules:
                   - Name: suffix
                     Value: .srt
+                  - Name: prefix
+                    Value: input/
             Function: !GetAtt LambdaVideoTranslateWithBedrock.Arn
 
   S3BucketPermission:
