@@ -16,9 +16,10 @@ else
 
     cd /home/cloudshell-user/translate/video-translate-with-bedrock/resource/
     aws s3 cp s3://${s3_bucket}/output/input_translated.srt .
+    ffmpeg -i input.mp4 -vf "subtitles=input.srt:force_style='Noto Sans'" -c:a copy input_subtitle.mp4
     ffmpeg -i input.mp4 -vf "subtitles=input_translated.srt:force_style='Zhuque Fangsong (technical preview),朱雀仿宋（预览测试版）'" -c:a copy output.mp4
     aws  s3 cp output.mp4 s3://${s3_bucket}/output/output.mp4 
-    aws  s3 cp input.mp4 s3://${s3_bucket}/input/input.mp4 
+    aws  s3 cp input_subtitle.mp4 s3://${s3_bucket}/input/input.mp4 
 fi
 
 
