@@ -9,10 +9,38 @@ Parameters:
     #Type: String
     #Default: ''
     #Description: 'Bedrock ID for the translation service'
-  #TargetLanguage:
-    #Type: String
-    #Default: ''
-    #Description: 'Target language for translation'
+  SourceLanguage:
+    Type: String
+    Default: 'en'
+    AllowedValues:
+      - 'en'
+      - 'es'
+      - 'fr'
+      - 'de'
+      - 'it'
+      - 'pt'
+      - 'ar'
+      - 'hi'
+      - 'ja'
+      - 'ko'
+      - 'zh'
+    Description: 'Source language for translation'
+  TargetLanguage:
+    Type: String
+    Default: 'zh'
+    AllowedValues:
+      - 'en'
+      - 'es'
+      - 'fr'
+      - 'de'
+      - 'it'
+      - 'pt'
+      - 'ar'
+      - 'hi'
+      - 'ja'
+      - 'ko'
+      - 'zh'
+    Description: 'Target language for translation'
 
 Resources:
   LambdaVideoTranslateWithBedrock:
@@ -36,8 +64,8 @@ Resources:
               region_name='us-east-1'
           )
 
-          source_lang = 'en'
-          target_lang = 'zh'
+          source_lang = os.environ['SourceLanguage']
+          target_lang = os.environ['TargetLanguage']
           model_id = 'anthropic.claude-3-sonnet-20240229-v1:0'
 
 
@@ -156,6 +184,10 @@ Resources:
 
       Runtime: python3.8
       Timeout: 30
+      Environment:
+        Variables:
+          SourceLanguage: !Ref SourceLanguage
+          TargetLanguage: !Ref TargetLanguage
   
   LambdaExecutionRole:
     Type: AWS::IAM::Role
@@ -206,8 +238,41 @@ Resources:
                   - Name: prefix
                     Value: input/
             Function: !GetAtt LambdaVideoTranslateWithBedrock.Arn
+  
+  CloudFrontOriginAccessIdentity:
+    Type: AWS::CloudFront::CloudFrontOriginAccessIdentity
+    Properties:
+      CloudFrontOriginAccessIdentityConfig:
+        Comment: !Ref S3BucketName
 
-  S3BucketPermission:
+  CloudFrontDistribution:
+    Type: 'AWS::CloudFront::Distribution'
+    Properties:
+      DistributionConfig:
+        Origins:
+          - Id: S3Origin
+            DomainName: !GetAtt S3Bucket.RegionalDomainName
+            S3OriginConfig:
+              OriginAccessIdentity: !Sub 'origin-access-identity/cloudfront/${CloudFrontOriginAccessIdentity}'
+        DefaultCacheBehavior:
+          TargetOriginId: S3Origin
+          AllowedMethods:
+            - GET
+            - HEAD
+          CachedMethods:
+            - GET
+            - HEAD
+          ForwardedValues:
+            QueryString: false
+          MinTTL: 0
+          DefaultTTL: 86400
+          MaxTTL: 31536000
+          ViewerProtocolPolicy: allow-all
+        Enabled: true
+
+
+
+  S3BucketPermissionForLambda:
     Type: AWS::Lambda::Permission
     Properties: 
       Action: lambda:InvokeFunction
@@ -215,7 +280,19 @@ Resources:
       Principal: s3.amazonaws.com
       SourceAccount: !Ref AWS::AccountId
       SourceArn: !Sub 'arn:aws:s3:::${S3BucketName}'
-
+  
+  S3BucketPermissionForCloudfront:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref S3Bucket
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS: !Sub "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity ${CloudFrontOriginAccessIdentity}"
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${S3Bucket}/*"
 
 
 Outputs:
@@ -225,3 +302,6 @@ Outputs:
   S3BucketName: 
     Description: S3 bucket name
     Value: !Ref S3Bucket
+  CloudFrontDomainName:
+    Description: The domain name of the CloudFront distribution
+    Value: !GetAtt CloudFrontDistribution.DomainName
